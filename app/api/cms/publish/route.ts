@@ -1,0 +1,2 @@
+import { NextResponse } from "next/server"; import { db } from "@/lib/db"; import { currentUserId } from "@/lib/auth";
+export async function POST(){const id=await currentUserId();if(!id)return NextResponse.json({error:"Unauthorized"},{status:401});const p=await db.portfolio.findUnique({where:{userId:id}});if(!p)return NextResponse.json({error:"Portfolio not found"},{status:404});await db.portfolio.update({where:{id:p.id},data:{published:p.draft,publishedAt:new Date()}});return NextResponse.json({ok:true,publishedAt:new Date()})}

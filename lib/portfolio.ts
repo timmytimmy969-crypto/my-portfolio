@@ -1,0 +1,2 @@
+import { db } from "./db"; import type { PortfolioData } from "./types";
+export async function getPortfolio(slug:string, preview=false, ownerId?:string){const p=await db.portfolio.findUnique({where:{slug}}); if(!p || (!preview && (!p.isPublic || !p.published))) return null; if(preview && p.userId!==ownerId)return null; return {id:p.id,slug:p.slug,data:(preview?p.draft:p.published) as PortfolioData,publishedAt:p.publishedAt,isPublic:p.isPublic};}
