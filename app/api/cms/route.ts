@@ -1,5 +1,36 @@
-import { NextResponse } from "next/server"; import { z } from "zod"; import { db } from "@/lib/db"; import { currentUserId } from "@/lib/auth";
-const data=z.object({profile:z.object({name:z.string().min(1),title:z.string(),bio:z.string(),about:z.string(),email:z.string().email(),heroImage:z.string().optional(),profileImage:z.string().optional(),skills:z.array(z.string()),socials:z.record(z.string()),cvUrl:z.string().optional(),cvVisible:z.boolean()}),folders:z.array(z.object({id:z.string(),name:z.string().min(1),hidden:z.boolean(),order:z.number()})),projects:z.array(z.object({id:z.string(),folderId:z.string(),title:z.string().min(1),summary:z.string(),client:z.string().optional(),year:z.string().optional(),role:z.string().optional(),thumbnail:z.string().optional(),videoUrl:z.string().optional(),featured:z.boolean(),visible:z.boolean(),order:z.number()})),settings:z.object({metaDescription:z.string(),showContact:z.boolean()})});
-async function mine(){const id=await currentUserId();return id?db.portfolio.findUnique({where:{userId:id}}):null}
-export async function GET(){const p=await mine();return p?NextResponse.json(p):NextResponse.json({error:"Unauthorized"},{status:401})}
-export async function PUT(req:Request){const p=await mine();if(!p)return NextResponse.json({error:"Unauthorized"},{status:401});const parsed=data.safeParse(await req.json());if(!parsed.success)return NextResponse.json({error:"Please complete all required content fields."},{status:400});await db.portfolio.update({where:{id:p.id},data:{draft:parsed.data}});return NextResponse.json({ok:true})}
+import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
+import { db } from "@/lib/db";
+import { currentUserId } from "@/lib/auth";
+
+export async function POST() {
+  const id = await currentUserId();
+
+  if (!id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const portfolio = await db.portfolio.findUnique({
+    where: { userId: id },
+  });
+
+  if (!portfolio) {
+    return NextResponse.json(
+      { error: "Portfolio not found" },
+      { status: 404 }
+    );
+  }
+
+  await db.portfolio.update({
+    where: { id: portfolio.id },
+    data: {
+      published: portfolio.draft as Prisma.InputJsonValue,
+      publishedAt: new Date(),
+    },
+  });
+
+  return NextResponse.json({
+    ok: true,
+    publishedAt: new Date(),
+  });
+}
