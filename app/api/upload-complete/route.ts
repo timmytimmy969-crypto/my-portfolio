@@ -1,4 +1,4 @@
-import { head } from "@vercel/blob";
+import { head, list } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { currentUserId } from "@/lib/auth";
 
@@ -15,7 +15,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid upload path." }, { status: 400 });
     }
 
-    const blob = await head(pathname);
+    // Vercel Blob may add a random suffix to the actual stored pathname.
+    // The pathname we signed for the PUT can therefore differ from the
+    // pathname returned by Blob after the upload. Find the actual object
+    // using the original pathname as a prefix, then read its canonical URL.
+    const result = await list({ prefix: pathname, limit: 10 });
+    const match = result.blobs.find(
+      (blob) => blob.pathname === pathname || blob.pathname.startsWith(`${pathname}-`),
+    );
+
+    if (!match) {
+      return NextResponse.json(
+        { error: "Upload completed, but the Blob could not be found yet. Please try again." },
+        { status: 404 },
+      );
+    }
+
+    const blob = await head(match.url);
 
     return NextResponse.json({
       ok: true,
