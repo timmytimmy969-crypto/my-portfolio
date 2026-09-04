@@ -15,14 +15,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid upload path." }, { status: 400 });
     }
 
-    // Vercel Blob may add a random suffix to the actual stored pathname.
-    // The pathname we signed for the PUT can therefore differ from the
-    // pathname returned by Blob after the upload. Find the actual object
-    // using the original pathname as a prefix, then read its canonical URL.
-    const result = await list({ prefix: pathname, limit: 10 });
-    const match = result.blobs.find(
-      (blob) => blob.pathname === pathname || blob.pathname.startsWith(`${pathname}-`),
-    );
+    // Blob can add a random suffix to the stored filename. List the upload
+    // folder and match the exact generated name, or the same filename stem
+    // with Blob's random suffix inserted before the extension.
+    const slash = pathname.lastIndexOf("/");
+    const directory = slash >= 0 ? pathname.slice(0, slash + 1) : "";
+    const filename = slash >= 0 ? pathname.slice(slash + 1) : pathname;
+    const dot = filename.lastIndexOf(".");
+    const stem = dot > 0 ? filename.slice(0, dot) : filename;
+    const extension = dot > 0 ? filename.slice(dot) : "";
+
+    const result = await list({ prefix: directory, limit: 1000 });
+    const candidates = result.blobs.filter((blob) => blob.pathname.startsWith(directory));
+    const match = candidates.find((blob) => {
+      const actualName = blob.pathname.slice(directory.length);
+      return (
+        actualName === filename ||
+        (extension && actualName.startsWith(`${stem}-`) && actualName.endsWith(extension)) ||
+        (!extension && actualName.startsWith(`${stem}-`))
+      );
+    });
 
     if (!match) {
       return NextResponse.json(
