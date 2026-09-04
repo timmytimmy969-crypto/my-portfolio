@@ -37,6 +37,7 @@ export async function POST(request: Request) {
     const { presignedUrl } = await presignUrl(token, {
       pathname,
       operation: "put",
+      access: "public",
       validUntil: Date.now() + 15 * 60 * 1000,
     });
 
