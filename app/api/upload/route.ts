@@ -18,13 +18,10 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) {
-    return NextResponse.json({ configured: false }, { status: 500 });
-  }
-
   try {
-    await list({ limit: 1, token });
+    // New Vercel Blob projects can use Vercel OIDC, so do not require the
+    // legacy BLOB_READ_WRITE_TOKEN to be present in the function environment.
+    await list({ limit: 1 });
     return NextResponse.json({ configured: true, tokenWorks: true });
   } catch (error) {
     console.error("Blob token diagnostic failed:", error);
@@ -32,7 +29,7 @@ export async function GET() {
       {
         configured: true,
         tokenWorks: false,
-        error: error instanceof Error ? error.message : "Blob token test failed.",
+        error: error instanceof Error ? error.message : "Blob authentication failed.",
       },
       { status: 502 },
     );
@@ -44,20 +41,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) {
-    console.error("Blob upload error: BLOB_READ_WRITE_TOKEN is missing.");
-    return NextResponse.json(
-      { error: "Blob storage is not configured on this deployment." },
-      { status: 500 },
-    );
-  }
-
   try {
     const body = (await request.json()) as HandleUploadBody;
 
     const jsonResponse = await handleUpload({
-      token,
       body,
       request,
       onBeforeGenerateToken: async () => ({
