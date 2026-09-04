@@ -17,10 +17,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) {
+    console.error("Blob upload error: BLOB_READ_WRITE_TOKEN is missing.");
+    return NextResponse.json(
+      { error: "Blob storage is not configured on this deployment." },
+      { status: 500 },
+    );
+  }
+
   try {
     const body = (await request.json()) as HandleUploadBody;
 
     const jsonResponse = await handleUpload({
+      token,
       body,
       request,
       onBeforeGenerateToken: async () => ({
@@ -35,10 +45,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json(jsonResponse);
   } catch (error) {
-    console.error("Blob upload error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Upload failed." },
-      { status: 400 },
-    );
+    const message = error instanceof Error ? error.message : "Upload failed.";
+    console.error("Blob client-token error:", error);
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
