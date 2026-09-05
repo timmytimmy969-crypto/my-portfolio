@@ -8,6 +8,9 @@ const mediaStyle: React.CSSProperties = {
   display: "block",
 };
 
+const instagramUrl = "https://www.instagram.com/that_camera_guyy";
+const tiktokUrl = "https://www.tiktok.com/@that_camera_guyy";
+
 export default function PortfolioView({
   portfolio: p,
   slug,
@@ -134,6 +137,10 @@ export default function PortfolioView({
           to tell?
         </h2>
         <a href={`mailto:${p.profile.email}`}>{p.profile.email}</a>
+        <div className="social-links">
+          <a href={instagramUrl} target="_blank" rel="noopener noreferrer">Instagram ↗</a>
+          <a href={tiktokUrl} target="_blank" rel="noopener noreferrer">TikTok ↗</a>
+        </div>
         {p.profile.cvVisible && p.profile.cvUrl && (
           <a className="button outline" href={p.profile.cvUrl}>
             Download CV
